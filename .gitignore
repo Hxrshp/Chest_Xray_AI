@@ -1,0 +1,10 @@
+.venv/
+.hf_cache/
+__pycache__/
+*.pyc
+.DS_Store
+data/raw/images/
+data/samples/output_*
+checkpoints/
+*.pth
+.streamlit/

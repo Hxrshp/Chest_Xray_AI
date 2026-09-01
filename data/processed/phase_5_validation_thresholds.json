@@ -1,0 +1,58 @@
+{
+  "Atelectasis": {
+    "selected_threshold": 0.1,
+    "metric": "Youden_J_Calibrated"
+  },
+  "Cardiomegaly": {
+    "selected_threshold": 0.05,
+    "metric": "Youden_J_Calibrated"
+  },
+  "Consolidation": {
+    "selected_threshold": 0.05,
+    "metric": "Youden_J_Calibrated"
+  },
+  "Edema": {
+    "selected_threshold": 0.02,
+    "metric": "Youden_J_Calibrated"
+  },
+  "Effusion": {
+    "selected_threshold": 0.1,
+    "metric": "Youden_J_Calibrated"
+  },
+  "Emphysema": {
+    "selected_threshold": 0.02,
+    "metric": "Youden_J_Calibrated"
+  },
+  "Fibrosis": {
+    "selected_threshold": 0.02,
+    "metric": "Youden_J_Calibrated"
+  },
+  "Hernia": {
+    "selected_threshold": 0.01,
+    "metric": "Youden_J_Calibrated"
+  },
+  "Infiltration": {
+    "selected_threshold": 0.1,
+    "metric": "Youden_J_Calibrated"
+  },
+  "Mass": {
+    "selected_threshold": 0.08,
+    "metric": "Youden_J_Calibrated"
+  },
+  "Nodule": {
+    "selected_threshold": 0.05,
+    "metric": "Youden_J_Calibrated"
+  },
+  "Pleural_Thickening": {
+    "selected_threshold": 0.05,
+    "metric": "Youden_J_Calibrated"
+  },
+  "Pneumonia": {
+    "selected_threshold": 0.03,
+    "metric": "Youden_J_Calibrated"
+  },
+  "Pneumothorax": {
+    "selected_threshold": 0.03,
+    "metric": "Youden_J_Calibrated"
+  }
+}
