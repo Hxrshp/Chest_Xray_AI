@@ -126,14 +126,16 @@ def render_results_dashboard(result: PredictionResult, inference_time_sec: Optio
             f'<span style="background-color:#FFFFFF;color:#991B1B;border:1.5px solid #FCA5A5;padding:5px 14px;border-radius:9999px;font-size:0.95rem;font-weight:700;">Review Threshold: {top.threshold * 100:.0f}%</span>'
             '</div>'
             '</div>'
-            f'<div style="font-size:2.0rem;font-weight:800;color:#991B1B;margin:8px 0 4px 0;line-height:1.2;">{top.pathology}</div>'
-            f'<div style="font-size:1.02rem;color:#374151;margin-bottom:10px;line-height:1.5;"><b style="color:#111827;">📖 Medical Definition:</b> {top_desc}</div>'
+            f'<div style="font-size:2.0rem;font-weight:800;color:#991B1B;margin:8px 0 4px 0;line-height:1.2;">{top.pathology.replace("_", " ")}</div>'
+            f'<div style="font-size:1.02rem;color:#374151;margin-bottom:10px;line-height:1.5;"><b style="color:#111827;">📖 What this means:</b> {top_desc}</div>'
             + additional_badges_html
             + reassuring_html
             + '</div>'
         )
         st.html(card_html)
     else:
+        normal_top_class = result.highest_probability_class
+        normal_top_desc = PATHOLOGY_DESCRIPTIONS.get(normal_top_class, PATHOLOGY_DESCRIPTIONS.get(normal_top_class.replace("_", " "), "Normal finding."))
         normal_html = (
             '<div style="background-color:#F0FDF4;border:1.5px solid #86EFAC;border-left:6px solid #16A34A;border-radius:12px;padding:18px 22px;margin-bottom:22px;box-shadow:0 2px 4px rgba(22,163,74,0.06);">'
             '<div style="font-size:0.82rem;font-weight:800;color:#166534;text-transform:uppercase;letter-spacing:0.6px;display:flex;align-items:center;gap:6px;">'
@@ -141,6 +143,7 @@ def render_results_dashboard(result: PredictionResult, inference_time_sec: Optio
             '</div>'
             '<div style="font-size:1.75rem;font-weight:800;color:#15803D;margin:6px 0 4px 0;">Unremarkable Radiograph (No Acute Finding)</div>'
             '<div style="font-size:0.95rem;color:#166534;line-height:1.5;">All 14 thoracic disease categories evaluated were within normal baseline limits and below diagnostic review thresholds.</div>'
+            f'<div style="margin-top:10px;font-size:0.88rem;color:#334155;"><b style="color:#1E293B;">Highest relative signal:</b> {normal_top_class.replace("_", " ")} ({result.highest_probability * 100:.1f}%) — <i>{normal_top_desc}</i></div>'
             '</div>'
         )
         st.html(normal_html)

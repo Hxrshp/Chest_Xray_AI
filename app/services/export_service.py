@@ -64,20 +64,21 @@ def create_export_payload(
 
 
 PATHOLOGY_DESCRIPTIONS = {
-    "Atelectasis": "Partial collapse or volume loss of lung parenchyma.",
-    "Cardiomegaly": "Enlargement of the cardiac silhouette.",
-    "Consolidation": "Fluid, pus, or cellular accumulation in lung alveoli.",
-    "Edema": "Fluid accumulation in pulmonary interstitial or alveolar spaces.",
-    "Effusion": "Fluid accumulation in the pleural cavity surrounding the lungs.",
-    "Emphysema": "Alveolar wall destruction causing abnormal air trapping.",
-    "Fibrosis": "Scarring and fibrotic remodeling of lung tissue.",
-    "Hernia": "Diaphragmatic displacement of abdominal viscera into thorax.",
-    "Infiltration": "Ill-defined pulmonary opacities / inflammatory densities.",
-    "Mass": "Focal pulmonary lesion greater than 3 cm in diameter.",
-    "Nodule": "Focal, discrete pulmonary opacity equal to or under 3 cm.",
-    "Pleural_Thickening": "Fibrotic thickening or scarring of pleural lining.",
-    "Pneumonia": "Infectious inflammatory consolidation of lung parenchyma.",
-    "Pneumothorax": "Presence of air in pleural space causing lung collapse."
+    "Atelectasis": "Partial collapse of the lung, where small air sacs deflate.",
+    "Cardiomegaly": "An enlarged heart that looks bigger than normal on the scan.",
+    "Consolidation": "Part of the lung filled with fluid or mucus instead of air, often from an infection.",
+    "Edema": "Excess fluid buildup inside the lung tissue, making it harder to breathe.",
+    "Effusion": "Fluid pooling in the space between the lungs and the chest wall.",
+    "Emphysema": "Damaged air sacs in the lungs that trap air and make breathing difficult.",
+    "Fibrosis": "Permanent scarring or stiffening of lung tissue from previous irritation or damage.",
+    "Hernia": "Part of the stomach or intestines pushing up into the chest through the diaphragm.",
+    "Infiltration": "Hazy cloudy patches in the lungs showing areas of swelling, fluid, or infection.",
+    "Mass": "A large lump or growth in the lung (larger than 3 cm / about coin-sized or bigger).",
+    "Nodule": "A small spot or round lump in the lung (smaller than 3 cm / pea or marble-sized).",
+    "Pleural_Thickening": "Scarring or thickening of the smooth outer lining that protects the lungs.",
+    "Pleural Thickening": "Scarring or thickening of the smooth outer lining that protects the lungs.",
+    "Pneumonia": "A lung infection that causes inflammation and fluid buildup.",
+    "Pneumothorax": "A collapsed lung caused by air leaking into the space outside the lung."
 }
 
 
