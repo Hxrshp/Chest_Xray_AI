@@ -23,10 +23,9 @@ from app.ui.components import (
     render_model_info,
     render_export_section,
 )
-from app.config import ENABLE_ANATOMICAL_GATEKEEPER
 from app.services.inference_service import run_inference
 from app.services.explanation_service import generate_gradcam_explanation
-from ml.inference.modality_validator import validate_chest_radiograph
+from ml.inference.preprocessing import validate_radiograph_modality
 
 
 def main():
@@ -120,11 +119,8 @@ def main():
             # Display Image Preview & Preprocessing Transparency Checklist
             render_uploaded_image_preview(pil_img, filename)
 
-            # Tier-1 Anatomical Gatekeeper Check (Blocks non-radiographs / non-lung inputs)
-            if ENABLE_ANATOMICAL_GATEKEEPER:
-                is_valid_xray, modality_error, metrics = validate_chest_radiograph(pil_img)
-            else:
-                is_valid_xray, modality_error, metrics = True, None, {}
+            # Strict Modality Check (Option B: Block non-radiographs)
+            is_valid_xray, modality_error = validate_radiograph_modality(pil_img)
 
             st.markdown("---")
             if not is_valid_xray:
