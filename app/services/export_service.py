@@ -8,6 +8,7 @@ import sys
 import json
 import hashlib
 import time
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -16,6 +17,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from ml.inference.output_schema import PredictionResult
 from app.config import MODEL_METRICS, MEDICAL_DISCLAIMER_FULL
+
+IST = timezone(timedelta(hours=5, minutes=30))
 
 
 def create_export_payload(
@@ -29,7 +32,7 @@ def create_export_payload(
     img_hash = hashlib.sha256(image_bytes).hexdigest() if image_bytes else "N/A"
 
     payload = {
-        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime()),
+        "timestamp": datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S IST"),
         "image_metadata": {
             "image_identifier": Path(result.image_path).name,
             "sha256_hash": img_hash,
@@ -138,7 +141,7 @@ def generate_human_readable_report(
 
     img_name = Path(result.image_path).name if result.image_path else "Uploaded Radiograph"
     img_hash = hashlib.sha256(image_bytes).hexdigest()[:16] + "..." if image_bytes else "N/A"
-    current_time = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
+    current_time = datetime.now(IST).strftime("%Y-%m-%d %I:%M:%S %p IST")
 
     positive_preds = [p for p in result.predictions.values() if p.binary_prediction]
     positive_preds.sort(key=lambda x: x.probability, reverse=True)
@@ -151,19 +154,27 @@ def generate_human_readable_report(
         f"PATIENT ID       : {p_id}",
         f"AGE              : {p_age} yrs",
         f"GENDER           : {p_gender}",
-        f"DATE             : {current_time}",
+        f"DATE & TIME (IST): {current_time}",
         "-" * 80,
-        "EXPLANATION:",
+        "CLINICAL AI IMPRESSION & FINDINGS:",
     ]
 
     if positive_preds:
-        for idx, p in enumerate(positive_preds, start=1):
-            desc = PATHOLOGY_DESCRIPTIONS.get(p.pathology, "")
-            lines.append(f"  {idx}. {p.pathology.upper()} — Model Confidence: {p.probability * 100:.1f}% (Threshold: {p.threshold * 100:.0f}%) [FLAG: REVIEW RECOMMENDED]")
-            if desc:
-                lines.append(f"     Clinical Context: {desc}")
+        top = positive_preds[0]
+        top_name = top.pathology.replace("_", " ")
+        top_desc = PATHOLOGY_DESCRIPTIONS.get(top.pathology, PATHOLOGY_DESCRIPTIONS.get(top_name, ""))
+        lines.append(f"  [PRIMARY FINDING] {top_name.upper()} — Model Confidence: {top.probability * 100:.1f}% (Threshold: {top.threshold * 100:.0f}%) [FLAG: REVIEW RECOMMENDED]")
+        if top_desc:
+            lines.append(f"                    Clinical Context: {top_desc}")
+
+        other_pos = positive_preds[1:]
+        if other_pos:
+            lines.append(f"\n  [ADDITIONAL FINDINGS ABOVE THRESHOLD] ({len(other_pos)} co-occurring conditions):")
+            for idx, p in enumerate(other_pos, start=1):
+                p_display = p.pathology.replace("_", " ")
+                lines.append(f"    {idx}. {p_display:<20} : {p.probability * 100:>5.1f}%  (Cutoff: {p.threshold * 100:>2.0f}%)  [FLAG: REVIEW RECOMMENDED]")
     else:
-        lines.append("  1. NO ACUTE PATHOLOGY DETECTED — All 14 conditions below clinical review thresholds.")
+        lines.append("  [NORMAL] NO ACUTE PATHOLOGY DETECTED — All 14 conditions below clinical review thresholds.")
 
     lines.extend([
         "-" * 80,
@@ -292,42 +303,125 @@ def generate_pdf_report(
     story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#2563EB'), spaceAfter=10))
 
     # Patient & Scan Meta Table (Filtered to user's exact 5 requested fields)
-    current_time = time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())
+    current_time = datetime.now(IST).strftime("%d-%b-%Y, %I:%M:%S %p IST")
 
     meta_data = [
         [Paragraph("<b>Patient Name:</b>", body_style), Paragraph(p_name, bold_style),
          Paragraph("<b>Generated Patient ID:</b>", body_style), Paragraph(p_id, bold_style)],
         [Paragraph("<b>Age:</b>", body_style), Paragraph(f"{p_age} yrs", body_style),
          Paragraph("<b>Gender:</b>", body_style), Paragraph(p_gender, body_style)],
-        [Paragraph("<b>Date:</b>", body_style), Paragraph(current_time, body_style),
-         Paragraph("", body_style), Paragraph("", body_style)]
+        [Paragraph("<b>Date & Time:</b>", body_style), Paragraph(current_time, bold_style),
+         Paragraph("<b>Timezone:</b>", body_style), Paragraph("IST (UTC+05:30)", body_style)]
     ]
     t_meta = Table(meta_data, colWidths=[110, 160, 120, 150])
     t_meta.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#F8FAFC')),
         ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#CBD5E1')),
         ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
     ]))
     story.append(t_meta)
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 6))
 
-    # Explanation Box
-    story.append(Paragraph("Explanation", heading_style))
-    conv_text = generate_conversational_summary(result).replace("**", "").replace("🚨", "[PRIMARY FINDING] ").replace("⚠️", "[ATTENTION] ").replace("✅", "[NORMAL] ")
-    p_conv = Paragraph(conv_text, body_style)
-    t_conv = Table([[p_conv]], colWidths=[540])
-    t_conv.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#EFF6FF')),
-        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#3B82F6')),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('LEFTPADDING', (0, 0), (-1, -1), 8),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
-    ]))
-    story.append(t_conv)
-    story.append(Spacer(1, 8))
+    # Clinical AI Impression & Findings
+    story.append(Paragraph("Clinical AI Impression & Findings", heading_style))
+
+    positive_preds = [p for p in result.predictions.values() if p.binary_prediction]
+    positive_preds.sort(key=lambda x: x.probability, reverse=True)
+
+    if positive_preds:
+        top = positive_preds[0]
+        top_name = top.pathology.replace('_', ' ')
+        top_desc = PATHOLOGY_DESCRIPTIONS.get(top.pathology, PATHOLOGY_DESCRIPTIONS.get(top_name, "Pulmonary abnormality requiring clinical correlation."))
+        other_pos = positive_preds[1:]
+
+        primary_html = (
+            f"<b>PRIMARY AI SUSPECTED PATHOLOGY:</b> &nbsp;"
+            f"<font color='#DC2626' size='10'><b>{top_name.upper()}</b></font>"
+            f"&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;"
+            f"<b>Model Confidence:</b> <font color='#DC2626'><b>{top.probability * 100:.1f}%</b></font>"
+            f"&nbsp;&nbsp;|&nbsp;&nbsp;"
+            f"<b>Validation Cutoff:</b> {top.threshold * 100:.0f}%<br/>"
+            f"<b>Clinical Meaning (Layman Terms):</b> <font color='#334155'>{top_desc}</font>"
+        )
+        t_primary = Table([[Paragraph(primary_html, body_style)]], colWidths=[540])
+        t_primary.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#FEF2F2')),
+            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#F87171')),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        story.append(t_primary)
+
+        if other_pos:
+            story.append(Spacer(1, 4))
+            other_header = Paragraph(
+                f"<b>Additional Co-occurring Findings Flagged Above Threshold ({len(other_pos)}):</b>",
+                ParagraphStyle(
+                    'CoHead',
+                    parent=body_style,
+                    fontSize=8,
+                    leading=10,
+                    textColor=colors.HexColor('#92400E'),
+                    fontName='Helvetica-Bold'
+                )
+            )
+            story.append(other_header)
+            story.append(Spacer(1, 2))
+
+            co_rows = []
+            current_row = []
+            for p in other_pos:
+                p_display = p.pathology.replace('_', ' ')
+                cell_text = (
+                    f"• <b>{p_display}</b>: <font color='#B45309'><b>{p.probability * 100:.1f}%</b></font> "
+                    f"<font color='#64748B' size='7.5'>(Cutoff: {p.threshold * 100:.0f}%)</font>"
+                )
+                current_row.append(Paragraph(cell_text, body_style))
+                if len(current_row) == 2:
+                    co_rows.append(current_row)
+                    current_row = []
+            if current_row:
+                while len(current_row) < 2:
+                    current_row.append(Paragraph("", body_style))
+                co_rows.append(current_row)
+
+            t_co = Table(co_rows, colWidths=[270, 270])
+            t_co.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#FFFBEB')),
+                ('BOX', (0, 0), (-1, -1), 0.75, colors.HexColor('#FCD34D')),
+                ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#FEF3C7')),
+                ('TOPPADDING', (0, 0), (-1, -1), 2.5),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ]))
+            story.append(t_co)
+    else:
+        normal_top = result.highest_probability_class.replace('_', ' ')
+        normal_desc = PATHOLOGY_DESCRIPTIONS.get(result.highest_probability_class, PATHOLOGY_DESCRIPTIONS.get(normal_top, "Normal variant or benign appearance."))
+        normal_cell = Paragraph(
+            f"<font color='#166534' size='9'><b>CLINICAL IMPRESSION: NO ACUTE PATHOLOGY DETECTED</b></font><br/>"
+            f"All 14 thoracic disease categories evaluated were within normal baseline limits and below diagnostic review thresholds. "
+            f"No acute consolidation, pneumothorax, or pleural effusion is identified.<br/>"
+            f"<font color='#475569' size='7.5'><i>Highest relative signal: {normal_top} ({result.highest_probability * 100:.1f}%) — {normal_desc}</i></font>",
+            body_style
+        )
+        t_normal = Table([[normal_cell]], colWidths=[540])
+        t_normal.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#F0FDF4')),
+            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#86EFAC')),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        story.append(t_normal)
+
+    story.append(Spacer(1, 6))
 
     # Findings Table
     story.append(Paragraph("Systematic 14-Pathology AI Analysis & Confidence Scores", heading_style))
@@ -338,31 +432,39 @@ def generate_pdf_report(
          Paragraph("<b>Clinical Decision Flag</b>", bold_style)]
     ]
 
-    for c_name, pred in result.predictions.items():
+    highlight_styles = []
+    for idx, (c_name, pred) in enumerate(result.predictions.items(), start=1):
         prob_str = f"{pred.probability * 100:.1f}%"
         thresh_str = f"{pred.threshold * 100:.0f}%" if pred.threshold else "50%"
+        display_name = c_name.replace("_", " ")
         if pred.binary_prediction:
             flag_p = Paragraph("⚠️ REVIEW RECOMMENDED", alert_style)
+            highlight_styles.append(('BACKGROUND', (0, idx), (-1, idx), colors.HexColor('#FEF2F2')))
         else:
             flag_p = Paragraph("✓ Within Normal Limits", safe_style)
+            if idx % 2 == 0:
+                highlight_styles.append(('BACKGROUND', (0, idx), (-1, idx), colors.HexColor('#F8FAFC')))
 
         table_rows.append([
-            Paragraph(c_name.replace("_", " "), body_style),
+            Paragraph(display_name, body_style),
             Paragraph(prob_str, body_style),
             Paragraph(thresh_str, body_style),
             flag_p
         ])
 
     t_findings = Table(table_rows, colWidths=[165, 110, 95, 170])
-    t_findings.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F1F5F9')),
+    base_table_style = [
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#E2E8F0')),
         ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#CBD5E1')),
         ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#E2E8F0')),
-        ('TOPPADDING', (0, 0), (-1, -1), 2.5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 2.5),
-    ]))
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+    ] + highlight_styles
+    t_findings.setStyle(TableStyle(base_table_style))
     story.append(t_findings)
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 6))
 
     # Recommendations & Safety Disclaimer
     story.append(Paragraph("Safety Disclaimer & Physician Verification", heading_style))
