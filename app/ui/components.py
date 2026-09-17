@@ -28,6 +28,7 @@ from app.config import (
 )
 from app.services.explanation_service import generate_gradcam_explanation
 from app.services.export_service import (
+    PATHOLOGY_DESCRIPTIONS,
     generate_conversational_summary,
     generate_human_readable_report,
     generate_pdf_report
@@ -73,39 +74,83 @@ def render_results_dashboard(result: PredictionResult, inference_time_sec: Optio
     positive_preds.sort(key=lambda x: x.probability, reverse=True)
 
     if positive_preds:
-        primary_disease = positive_preds[0]
-        other_diseases = [p.pathology for p in positive_preds[1:]]
+        top = positive_preds[0]
+        top_desc = PATHOLOGY_DESCRIPTIONS.get(top.pathology, "Abnormal thoracic finding detected.")
+        additional_findings = positive_preds[1:]
 
-        # Prominent Primary Disease Diagnosis Card
-        st.markdown(f"""
-        <div style="background-color: #FEF2F2; border: 2px solid #EF4444; border-radius: 10px; padding: 18px 22px; margin-bottom: 18px;">
-            <div style="font-size: 0.95rem; color: #991B1B; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">🩻 AI Diagnostic Result</div>
-            <div style="font-size: 1.8rem; font-weight: 800; color: #B91C1C; margin: 4px 0 8px 0;">{primary_disease.pathology}</div>
-            <div style="font-size: 1.05rem; color: #7F1D1D;">
-                <b>Confidence:</b> {primary_disease.probability * 100:.1f}% 
-                {f'<span style="margin-left: 12px; color: #991B1B;">| <b>Additional Findings:</b> {", ".join(other_diseases)}</span>' if other_diseases else ''}
+        # Additional findings pill chips
+        additional_badges_html = ""
+        if additional_findings:
+            badges = []
+            for p in additional_findings:
+                badges.append(
+                    f'<span style="display: inline-flex; align-items: center; gap: 6px; background-color: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; padding: 4px 11px; border-radius: 9999px; font-size: 0.85rem; font-weight: 600; margin: 3px 6px 3px 0;">'
+                    f'<span>⚠️</span> {p.pathology} <b style="color: #B45309;">{p.probability * 100:.1f}%</b></span>'
+                )
+            additional_badges_html = f"""
+            <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #FECDD3;">
+                <div style="font-size: 0.80rem; font-weight: 700; color: #991B1B; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 7px;">
+                    Additional Co-Occurring Findings Flagged Above Threshold ({len(additional_findings)}):
+                </div>
+                <div style="display: flex; flex-wrap: wrap; align-items: center;">
+                    {"".join(badges)}
+                </div>
             </div>
+            """
+
+        # Reassuring clean negatives
+        negatives = [p.pathology for p in result.predictions.values() if not p.binary_prediction and p.probability < 0.05]
+        reassuring_items = []
+        for key, label in [("Cardiomegaly", "Cardiomegaly"), ("Pneumothorax", "Pneumothorax"), ("Edema", "Pulmonary Edema")]:
+            if key in negatives:
+                reassuring_items.append(label)
+        reassuring_html = ""
+        if reassuring_items:
+            reassuring_html = f"""
+            <div style="margin-top: 10px; font-size: 0.84rem; color: #047857; display: flex; align-items: center; gap: 6px;">
+                <span>🛡️</span> <b>Reassuring Clinical Negatives:</b> No {", ".join(reassuring_items)} detected (&lt; 5% model probability).
+            </div>
+            """
+
+        st.markdown(f"""
+        <div style="background-color: #FEF2F2; border: 1.5px solid #FCA5A5; border-left: 6px solid #DC2626; border-radius: 12px; padding: 18px 22px; margin-bottom: 22px; box-shadow: 0 2px 4px rgba(220, 38, 38, 0.06);">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div style="font-size: 0.82rem; font-weight: 800; color: #991B1B; text-transform: uppercase; letter-spacing: 0.6px; display: flex; align-items: center; gap: 6px;">
+                    <span>🚨</span> AI Clinical Impression
+                </div>
+                <div style="display: flex; gap: 6px;">
+                    <span style="background-color: #DC2626; color: white; padding: 3px 10px; border-radius: 9999px; font-size: 0.82rem; font-weight: 700;">
+                        {top.probability * 100:.1f}% Confidence
+                    </span>
+                    <span style="background-color: #FEE2E2; color: #991B1B; border: 1px solid #FECDD3; padding: 3px 10px; border-radius: 9999px; font-size: 0.82rem; font-weight: 600;">
+                        Review Threshold: {top.threshold * 100:.0f}%
+                    </span>
+                </div>
+            </div>
+            <div style="font-size: 1.75rem; font-weight: 800; color: #991B1B; margin: 6px 0 4px 0;">
+                {top.pathology}
+            </div>
+            <div style="font-size: 0.95rem; color: #4B5563; line-height: 1.5;">
+                <b style="color: #1F2937;">Clinical Finding:</b> {top_desc}
+            </div>
+            {additional_badges_html}
+            {reassuring_html}
         </div>
         """, unsafe_allow_html=True)
     else:
         st.markdown("""
-        <div style="background-color: #F0FDF4; border: 2px solid #22C55E; border-radius: 10px; padding: 18px 22px; margin-bottom: 18px;">
-            <div style="font-size: 0.95rem; color: #166534; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">🩻 AI Diagnostic Result</div>
-            <div style="font-size: 1.8rem; font-weight: 800; color: #15803D; margin: 4px 0 8px 0;">Normal / No Finding</div>
-            <div style="font-size: 1.05rem; color: #166534;">No acute pathologies detected above diagnostic threshold.</div>
+        <div style="background-color: #F0FDF4; border: 1.5px solid #86EFAC; border-left: 6px solid #16A34A; border-radius: 12px; padding: 18px 22px; margin-bottom: 22px; box-shadow: 0 2px 4px rgba(22, 163, 74, 0.06);">
+            <div style="font-size: 0.82rem; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.6px; display: flex; align-items: center; gap: 6px;">
+                <span>✅</span> AI Clinical Impression
+            </div>
+            <div style="font-size: 1.75rem; font-weight: 800; color: #15803D; margin: 6px 0 4px 0;">
+                Unremarkable Radiograph (No Acute Finding)
+            </div>
+            <div style="font-size: 0.95rem; color: #166534; line-height: 1.5;">
+                All 14 thoracic disease categories evaluated were within normal baseline limits and below diagnostic review thresholds.
+            </div>
         </div>
         """, unsafe_allow_html=True)
-
-    # Conversational Explanation
-    conv_summary = generate_conversational_summary(result)
-    st.markdown(f"""
-    <div style="background-color: #F8FAFC; border: 1px solid #CBD5E1; border-left: 5px solid #2563EB; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px;">
-        <div style="font-size: 0.95rem; font-weight: 700; color: #1E3A8A; margin-bottom: 6px;">💬 Explanation:</div>
-        <div style="font-size: 0.95rem; color: #334155; line-height: 1.5;">
-            {conv_summary.replace(chr(10), '<br>')}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
 
     # View Mode Toggle (Flagged First vs Ranked vs Official Order)
     st.write("### All 14 Pathology Model Probabilities & Decision Flags")
