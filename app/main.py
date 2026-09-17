@@ -22,7 +22,9 @@ from app.ui.components import (
     render_pathology_detail_panel,
     render_model_info,
     render_export_section,
+    render_non_lung_rejection,
 )
+from ml.inference.modality_validator import validate_chest_radiograph
 from app.services.inference_service import run_inference
 from app.services.explanation_service import generate_gradcam_explanation
 
@@ -121,19 +123,38 @@ def main():
             # Analyze Button
             st.markdown("---")
             if st.button("🚀 Analyze Radiograph", type="primary", use_container_width=True):
-                with st.spinner("Executing DenseNet-121 inference model..."):
-                    start_t = time.time()
-                    result = run_inference(pil_img)
-                    elapsed = time.time() - start_t
+                # Tier 1: Modality Validation (Lung vs Non-Lung Image)
+                is_valid_cxr, validation_reason, metrics = validate_chest_radiograph(pil_img)
 
-                    st.session_state["last_result"] = result
-                    st.session_state["last_pil"] = pil_img
-                    st.session_state["last_bytes"] = image_bytes
-                    st.session_state["last_elapsed"] = elapsed
+                if not is_valid_cxr:
+                    st.session_state["validation_failed"] = True
+                    st.session_state["validation_reason"] = validation_reason
+                    st.session_state["validation_metrics"] = metrics
                     st.session_state["last_filename"] = filename
+                    # Remove any previous valid result for this session
+                    st.session_state.pop("last_result", None)
+                else:
+                    st.session_state["validation_failed"] = False
+                    with st.spinner("Executing DenseNet-121 inference model..."):
+                        start_t = time.time()
+                        result = run_inference(pil_img)
+                        elapsed = time.time() - start_t
 
-            # Render Results if available in session_state
-            if "last_result" in st.session_state and st.session_state.get("last_filename") == filename:
+                        st.session_state["last_result"] = result
+                        st.session_state["last_pil"] = pil_img
+                        st.session_state["last_bytes"] = image_bytes
+                        st.session_state["last_elapsed"] = elapsed
+                        st.session_state["last_filename"] = filename
+
+            # Render Tier 1 Non-Lung rejection if validation failed
+            if st.session_state.get("validation_failed") and st.session_state.get("last_filename") == filename:
+                render_non_lung_rejection(
+                    st.session_state["validation_reason"],
+                    st.session_state.get("validation_metrics")
+                )
+
+            # Render Tier 2 Diagnostic Results if valid and available in session_state
+            elif "last_result" in st.session_state and st.session_state.get("last_filename") == filename:
                 result = st.session_state["last_result"]
                 pil_img = st.session_state["last_pil"]
                 image_bytes = st.session_state["last_bytes"]
