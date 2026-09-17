@@ -129,15 +129,15 @@ def main():
                     st.session_state.pop("last_result", None)
 
                 st.html(
-                    f'<div style="background-color: #FEF2F2; border: 1.5px solid #FCA5A5; border-left: 6px solid #DC2626; border-radius: 10px; padding: 18px 22px; margin: 18px 0; box-shadow: 0 2px 5px rgba(220, 38, 38, 0.08);">'
-                    f'<div style="font-size: 1.12rem; font-weight: 800; color: #991B1B; display: flex; align-items: center; gap: 8px;">'
-                    f'<span>🚫</span> Invalid Image Modality (Analysis Blocked)'
+                    f'<div style="background-color: #FEF2F2; border: 1.5px solid #FCA5A5; border-left: 6px solid #DC2626; border-radius: 10px; padding: 16px 20px; margin: 18px 0; box-shadow: 0 2px 5px rgba(220, 38, 38, 0.06);">'
+                    f'<div style="font-size: 1.1rem; font-weight: 800; color: #991B1B; display: flex; align-items: center; gap: 8px;">'
+                    f'<span>🚫</span> Invalid Image (Analysis Blocked)'
                     f'</div>'
-                    f'<div style="font-size: 0.95rem; color: #4B5563; margin-top: 8px; line-height: 1.5;">'
+                    f'<div style="font-size: 0.95rem; color: #374151; margin-top: 6px; line-height: 1.5;">'
                     f'{modality_error}'
                     f'</div>'
-                    f'<div style="font-size: 0.88rem; color: #991B1B; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #FECDD3;">'
-                    f'💡 <b>Clinical Safety Policy:</b> DenseNet-121 was trained exclusively on thoracic radiographs. Analyzing non-medical photos (vehicles, everyday objects, scenery) produces false positives and is strictly prevented. Please upload a legitimate monochrome chest radiograph.'
+                    f'<div style="font-size: 0.88rem; color: #991B1B; margin-top: 8px;">'
+                    f'💡 <b>Safety Note:</b> Non-medical images are blocked to prevent false diagnoses. Please upload a valid chest radiograph.'
                     f'</div>'
                     f'</div>'
                 )

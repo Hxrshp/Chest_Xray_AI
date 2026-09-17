@@ -108,10 +108,7 @@ def validate_radiograph_modality(pil_img: Image.Image) -> Tuple[bool, Optional[s
 
     # High color saturation means it's a color photo, not an X-ray
     if channel_diff > 12.0 or sat_pct > 15.0:
-        return False, (
-            f"Vivid color photograph detected (Color Saturation: {sat_pct:.1f}%, Inter-channel Discrepancy: {channel_diff:.1f}). "
-            "Chest X-rays are monochromatic radiographs."
-        )
+        return False, "Color photograph detected. This system only analyzes monochrome chest X-rays."
 
     return True, None
 
