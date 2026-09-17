@@ -25,6 +25,7 @@ def validate_chest_radiograph(image: Image.Image) -> Tuple[bool, str, Dict[str, 
         metrics (dict): Numeric inspection metrics for diagnostic transparency.
     """
     img_rgb = image.convert("RGB")
+    arr_rgb = np.array(img_rgb, dtype=np.float32)
     w, h = img_rgb.size
     aspect_ratio = w / float(h)
 

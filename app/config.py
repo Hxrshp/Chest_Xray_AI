@@ -17,6 +17,9 @@ if not CHECKPOINT_PATH.exists():
 
 THRESHOLD_PATH = PROJECT_ROOT / "data" / "processed" / "phase_5_validation_thresholds.json"
 
+# Safety Gatekeeper Toggle: Set to False anytime to disable validation and revert to direct inference
+ENABLE_ANATOMICAL_GATEKEEPER = True
+
 # UI Metadata & Header Titles
 APP_TITLE = "Chest X-ray AI — Research Prototype"
 APP_SUBTITLE = "14-Class Multi-Label Chest Radiograph Analysis & Visual Explainability"
