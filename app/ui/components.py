@@ -68,12 +68,8 @@ def render_results_dashboard(result: PredictionResult, inference_time_sec: Optio
     
     if inference_time_sec is not None:
         st.html(
-            f'<div style="font-size: 0.98rem; color: #334155; margin: 6px 0 16px 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 16px;">'
+            f'<div style="font-size: 0.98rem; color: #334155; margin: 6px 0 16px 0; display: inline-flex; align-items: center; background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 8px 16px;">'
             f'<span>⏱️ <b>Inference Latency:</b> <code style="font-size: 1.02rem; font-weight: 700; color: #0F172A;">{inference_time_sec:.3f} s</code></span>'
-            f'<span style="color: #CBD5E1;">|</span>'
-            f'<span>💻 <b>Execution Device:</b> <code style="font-size: 1.02rem; font-weight: 700; color: #0F172A;">{result.device}</code></span>'
-            f'<span style="color: #CBD5E1;">|</span>'
-            f'<span style="color: #059669; font-weight: 700;">🔒 Local Privacy: Verified ✓</span>'
             f'</div>'
         )
 
