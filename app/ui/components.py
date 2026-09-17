@@ -36,9 +36,9 @@ from app.services.export_service import (
 
 
 def render_header():
-    st.markdown(f"<div class='main-title'>{APP_TITLE}</div>", unsafe_allow_html=True)
-    st.markdown(f"<div class='sub-title'>{APP_SUBTITLE}</div>", unsafe_allow_html=True)
-    st.markdown("<div class='safety-badge'>⚠️ RESEARCH USE ONLY — NOT FOR CLINICAL DIAGNOSIS</div>", unsafe_allow_html=True)
+    st.html(f"<div class='main-title'>{APP_TITLE}</div>")
+    st.html(f"<div class='sub-title'>{APP_SUBTITLE}</div>")
+    st.html("<div class='safety-badge'>⚠️ RESEARCH USE ONLY — NOT FOR CLINICAL DIAGNOSIS</div>")
 
 
 def render_uploaded_image_preview(pil_img: Image.Image, filename: str):
@@ -84,19 +84,18 @@ def render_results_dashboard(result: PredictionResult, inference_time_sec: Optio
             badges = []
             for p in additional_findings:
                 badges.append(
-                    f'<span style="display: inline-flex; align-items: center; gap: 6px; background-color: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; padding: 4px 11px; border-radius: 9999px; font-size: 0.85rem; font-weight: 600; margin: 3px 6px 3px 0;">'
-                    f'<span>⚠️</span> {p.pathology} <b style="color: #B45309;">{p.probability * 100:.1f}%</b></span>'
+                    f'<span style="display:inline-flex;align-items:center;gap:5px;background-color:#FEF3C7;color:#92400E;border:1px solid #FCD34D;padding:4px 11px;border-radius:9999px;font-size:0.85rem;font-weight:600;margin:3px 6px 3px 0;">'
+                    f'<span>⚠️</span> {p.pathology} <b style="color:#B45309;">{p.probability * 100:.1f}%</b></span>'
                 )
-            additional_badges_html = f"""
-            <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #FECDD3;">
-                <div style="font-size: 0.80rem; font-weight: 700; color: #991B1B; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 7px;">
-                    Additional Co-Occurring Findings Flagged Above Threshold ({len(additional_findings)}):
-                </div>
-                <div style="display: flex; flex-wrap: wrap; align-items: center;">
-                    {"".join(badges)}
-                </div>
-            </div>
-            """
+            additional_badges_html = (
+                '<div style="margin-top:14px;padding-top:12px;border-top:1px dashed #FECDD3;">'
+                f'<div style="font-size:0.80rem;font-weight:700;color:#991B1B;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:7px;">'
+                f'Additional Co-Occurring Findings Flagged Above Threshold ({len(additional_findings)}):'
+                '</div>'
+                '<div style="display:flex;flex-wrap:wrap;align-items:center;">'
+                + "".join(badges)
+                + '</div></div>'
+            )
 
         # Reassuring clean negatives
         negatives = [p.pathology for p in result.predictions.values() if not p.binary_prediction and p.probability < 0.05]
@@ -106,51 +105,41 @@ def render_results_dashboard(result: PredictionResult, inference_time_sec: Optio
                 reassuring_items.append(label)
         reassuring_html = ""
         if reassuring_items:
-            reassuring_html = f"""
-            <div style="margin-top: 10px; font-size: 0.84rem; color: #047857; display: flex; align-items: center; gap: 6px;">
-                <span>🛡️</span> <b>Reassuring Clinical Negatives:</b> No {", ".join(reassuring_items)} detected (&lt; 5% model probability).
-            </div>
-            """
+            reassuring_html = (
+                '<div style="margin-top:10px;font-size:0.84rem;color:#047857;display:flex;align-items:center;gap:6px;">'
+                f'<span>🛡️</span> <b>Reassuring Clinical Negatives:</b> No {", ".join(reassuring_items)} detected (&lt; 5% model probability).'
+                '</div>'
+            )
 
-        st.markdown(f"""
-        <div style="background-color: #FEF2F2; border: 1.5px solid #FCA5A5; border-left: 6px solid #DC2626; border-radius: 12px; padding: 18px 22px; margin-bottom: 22px; box-shadow: 0 2px 4px rgba(220, 38, 38, 0.06);">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                <div style="font-size: 0.82rem; font-weight: 800; color: #991B1B; text-transform: uppercase; letter-spacing: 0.6px; display: flex; align-items: center; gap: 6px;">
-                    <span>🚨</span> AI Clinical Impression
-                </div>
-                <div style="display: flex; gap: 6px;">
-                    <span style="background-color: #DC2626; color: white; padding: 3px 10px; border-radius: 9999px; font-size: 0.82rem; font-weight: 700;">
-                        {top.probability * 100:.1f}% Confidence
-                    </span>
-                    <span style="background-color: #FEE2E2; color: #991B1B; border: 1px solid #FECDD3; padding: 3px 10px; border-radius: 9999px; font-size: 0.82rem; font-weight: 600;">
-                        Review Threshold: {top.threshold * 100:.0f}%
-                    </span>
-                </div>
-            </div>
-            <div style="font-size: 1.75rem; font-weight: 800; color: #991B1B; margin: 6px 0 4px 0;">
-                {top.pathology}
-            </div>
-            <div style="font-size: 0.95rem; color: #4B5563; line-height: 1.5;">
-                <b style="color: #1F2937;">Clinical Finding:</b> {top_desc}
-            </div>
-            {additional_badges_html}
-            {reassuring_html}
-        </div>
-        """, unsafe_allow_html=True)
+        card_html = (
+            '<div style="background-color:#FEF2F2;border:1.5px solid #FCA5A5;border-left:6px solid #DC2626;border-radius:12px;padding:18px 22px;margin-bottom:22px;box-shadow:0 2px 4px rgba(220,38,38,0.06);">'
+            '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'
+            '<div style="font-size:0.82rem;font-weight:800;color:#991B1B;text-transform:uppercase;letter-spacing:0.6px;display:flex;align-items:center;gap:6px;">'
+            '<span>🚨</span> AI Clinical Impression'
+            '</div>'
+            '<div style="display:flex;gap:6px;">'
+            f'<span style="background-color:#DC2626;color:white;padding:3px 10px;border-radius:9999px;font-size:0.82rem;font-weight:700;">{top.probability * 100:.1f}% Confidence</span>'
+            f'<span style="background-color:#FEE2E2;color:#991B1B;border:1px solid #FECDD3;padding:3px 10px;border-radius:9999px;font-size:0.82rem;font-weight:600;">Review Threshold: {top.threshold * 100:.0f}%</span>'
+            '</div>'
+            '</div>'
+            f'<div style="font-size:1.75rem;font-weight:800;color:#991B1B;margin:6px 0 4px 0;">{top.pathology}</div>'
+            f'<div style="font-size:0.95rem;color:#4B5563;line-height:1.5;"><b style="color:#1F2937;">Clinical Finding:</b> {top_desc}</div>'
+            + additional_badges_html
+            + reassuring_html
+            + '</div>'
+        )
+        st.html(card_html)
     else:
-        st.markdown("""
-        <div style="background-color: #F0FDF4; border: 1.5px solid #86EFAC; border-left: 6px solid #16A34A; border-radius: 12px; padding: 18px 22px; margin-bottom: 22px; box-shadow: 0 2px 4px rgba(22, 163, 74, 0.06);">
-            <div style="font-size: 0.82rem; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.6px; display: flex; align-items: center; gap: 6px;">
-                <span>✅</span> AI Clinical Impression
-            </div>
-            <div style="font-size: 1.75rem; font-weight: 800; color: #15803D; margin: 6px 0 4px 0;">
-                Unremarkable Radiograph (No Acute Finding)
-            </div>
-            <div style="font-size: 0.95rem; color: #166534; line-height: 1.5;">
-                All 14 thoracic disease categories evaluated were within normal baseline limits and below diagnostic review thresholds.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        normal_html = (
+            '<div style="background-color:#F0FDF4;border:1.5px solid #86EFAC;border-left:6px solid #16A34A;border-radius:12px;padding:18px 22px;margin-bottom:22px;box-shadow:0 2px 4px rgba(22,163,74,0.06);">'
+            '<div style="font-size:0.82rem;font-weight:800;color:#166534;text-transform:uppercase;letter-spacing:0.6px;display:flex;align-items:center;gap:6px;">'
+            '<span>✅</span> AI Clinical Impression'
+            '</div>'
+            '<div style="font-size:1.75rem;font-weight:800;color:#15803D;margin:6px 0 4px 0;">Unremarkable Radiograph (No Acute Finding)</div>'
+            '<div style="font-size:0.95rem;color:#166534;line-height:1.5;">All 14 thoracic disease categories evaluated were within normal baseline limits and below diagnostic review thresholds.</div>'
+            '</div>'
+        )
+        st.html(normal_html)
 
     # View Mode Toggle (Flagged First vs Ranked vs Official Order)
     st.write("### All 14 Pathology Model Probabilities & Decision Flags")
@@ -226,12 +215,12 @@ def render_gradcam_section(pil_img: Image.Image, result: PredictionResult):
             target_prob = result.predictions[target_class].probability * 100
             is_flagged = result.predictions[target_class].binary_prediction
             
-            st.markdown(f"""
-            <div style="margin: 10px 0 16px 0; padding: 10px 16px; background-color: #F8FAFC; border-left: 4px solid {'#EF4444' if is_flagged else '#3B82F6'}; border-radius: 4px;">
-                <b>Showing Attention Map For:</b> <span style="font-size: 1.15rem; font-weight: 700; color: {'#DC2626' if is_flagged else '#2563EB'};">{target_class}</span> 
-                (Model Probability: <b>{target_prob:.1f}%</b> | Status: <b>{'FLAG: REVIEW ⚠️' if is_flagged else 'Below Threshold ✓'}</b>)
-            </div>
-            """, unsafe_allow_html=True)
+            st.html(
+                f'<div style="margin: 10px 0 16px 0; padding: 10px 16px; background-color: #F8FAFC; border-left: 4px solid {"#EF4444" if is_flagged else "#3B82F6"}; border-radius: 4px;">'
+                f'<b>Showing Attention Map For:</b> <span style="font-size: 1.15rem; font-weight: 700; color: {"#DC2626" if is_flagged else "#2563EB"};">{target_class}</span> '
+                f'(Model Probability: <b>{target_prob:.1f}%</b> | Status: <b>{"FLAG: REVIEW ⚠️" if is_flagged else "Below Threshold ✓"}</b>)'
+                '</div>'
+            )
             
             col1, col2 = st.columns(2)
             with col1:
@@ -288,12 +277,12 @@ def render_export_section(result: PredictionResult, image_bytes: Optional[bytes]
 
     # Patient Details Input Card
     with st.container():
-        st.markdown("""
-        <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px 18px; margin-bottom: 16px;">
-            <div style="font-size: 1rem; font-weight: 700; color: #0F172A; margin-bottom: 4px;">👤 Patient Identification & Study Details</div>
-            <div style="font-size: 0.85rem; color: #64748B;">These details will be stamped onto the official PDF diagnostic report.</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.html(
+            '<div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px 18px; margin-bottom: 16px;">'
+            '<div style="font-size: 1rem; font-weight: 700; color: #0F172A; margin-bottom: 4px;">👤 Patient Identification & Study Details</div>'
+            '<div style="font-size: 0.85rem; color: #64748B;">These details will be stamped onto the official PDF diagnostic report.</div>'
+            '</div>'
+        )
 
         col_p1, col_p2, col_p3 = st.columns([2, 1, 1.5])
         with col_p1:
