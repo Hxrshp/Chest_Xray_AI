@@ -67,7 +67,15 @@ def render_results_dashboard(result: PredictionResult, inference_time_sec: Optio
     st.subheader("📊 AI-Assisted Radiograph Analysis Results")
     
     if inference_time_sec is not None:
-        st.caption(f"Inference latency: `{inference_time_sec:.3f} s` | Execution Device: `{result.device}` | Local Privacy: Verified ✓")
+        st.html(
+            f'<div style="font-size: 0.98rem; color: #334155; margin: 6px 0 16px 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 10px 16px;">'
+            f'<span>⏱️ <b>Inference Latency:</b> <code style="font-size: 1.02rem; font-weight: 700; color: #0F172A;">{inference_time_sec:.3f} s</code></span>'
+            f'<span style="color: #CBD5E1;">|</span>'
+            f'<span>💻 <b>Execution Device:</b> <code style="font-size: 1.02rem; font-weight: 700; color: #0F172A;">{result.device}</code></span>'
+            f'<span style="color: #CBD5E1;">|</span>'
+            f'<span style="color: #059669; font-weight: 700;">🔒 Local Privacy: Verified ✓</span>'
+            f'</div>'
+        )
 
     # Flagged Positive Findings
     positive_preds = [p for p in result.predictions.values() if p.binary_prediction]
@@ -84,12 +92,12 @@ def render_results_dashboard(result: PredictionResult, inference_time_sec: Optio
             badges = []
             for p in additional_findings:
                 badges.append(
-                    f'<span style="display:inline-flex;align-items:center;gap:5px;background-color:#FEF3C7;color:#92400E;border:1px solid #FCD34D;padding:4px 11px;border-radius:9999px;font-size:0.85rem;font-weight:600;margin:3px 6px 3px 0;">'
+                    f'<span style="display:inline-flex;align-items:center;gap:6px;background-color:#FEF3C7;color:#92400E;border:1px solid #FCD34D;padding:5px 12px;border-radius:9999px;font-size:0.90rem;font-weight:600;margin:4px 6px 4px 0;">'
                     f'<span>⚠️</span> {p.pathology} <b style="color:#B45309;">{p.probability * 100:.1f}%</b></span>'
                 )
             additional_badges_html = (
-                '<div style="margin-top:14px;padding-top:12px;border-top:1px dashed #FECDD3;">'
-                f'<div style="font-size:0.80rem;font-weight:700;color:#991B1B;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:7px;">'
+                '<div style="margin-top:16px;padding-top:14px;border-top:1px dashed #FECDD3;">'
+                f'<div style="font-size:0.85rem;font-weight:700;color:#991B1B;text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">'
                 f'Additional Co-Occurring Findings Flagged Above Threshold ({len(additional_findings)}):'
                 '</div>'
                 '<div style="display:flex;flex-wrap:wrap;align-items:center;">'
@@ -106,24 +114,24 @@ def render_results_dashboard(result: PredictionResult, inference_time_sec: Optio
         reassuring_html = ""
         if reassuring_items:
             reassuring_html = (
-                '<div style="margin-top:10px;font-size:0.84rem;color:#047857;display:flex;align-items:center;gap:6px;">'
+                '<div style="margin-top:12px;font-size:0.90rem;color:#047857;display:flex;align-items:center;gap:6px;">'
                 f'<span>🛡️</span> <b>Reassuring Clinical Negatives:</b> No {", ".join(reassuring_items)} detected (&lt; 5% model probability).'
                 '</div>'
             )
 
         card_html = (
-            '<div style="background-color:#FEF2F2;border:1.5px solid #FCA5A5;border-left:6px solid #DC2626;border-radius:12px;padding:18px 22px;margin-bottom:22px;box-shadow:0 2px 4px rgba(220,38,38,0.06);">'
-            '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'
-            '<div style="font-size:0.82rem;font-weight:800;color:#991B1B;text-transform:uppercase;letter-spacing:0.6px;display:flex;align-items:center;gap:6px;">'
+            '<div style="background-color:#FEF2F2;border:1.5px solid #FCA5A5;border-left:6px solid #DC2626;border-radius:12px;padding:20px 24px;margin-bottom:22px;box-shadow:0 2px 5px rgba(220,38,38,0.06);">'
+            '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:6px;">'
+            '<div style="font-size:0.95rem;font-weight:800;color:#991B1B;text-transform:uppercase;letter-spacing:0.8px;display:flex;align-items:center;gap:8px;">'
             '<span>🚨</span> AI Clinical Impression'
             '</div>'
-            '<div style="display:flex;gap:6px;">'
-            f'<span style="background-color:#DC2626;color:white;padding:3px 10px;border-radius:9999px;font-size:0.82rem;font-weight:700;">{top.probability * 100:.1f}% Confidence</span>'
-            f'<span style="background-color:#FEE2E2;color:#991B1B;border:1px solid #FECDD3;padding:3px 10px;border-radius:9999px;font-size:0.82rem;font-weight:600;">Review Threshold: {top.threshold * 100:.0f}%</span>'
+            '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+            f'<span style="background-color:#DC2626;color:#FFFFFF;padding:6px 14px;border-radius:9999px;font-size:1.0rem;font-weight:700;box-shadow:0 1px 2px rgba(220,38,38,0.2);">{top.probability * 100:.1f}% Confidence</span>'
+            f'<span style="background-color:#FFFFFF;color:#991B1B;border:1.5px solid #FCA5A5;padding:5px 14px;border-radius:9999px;font-size:0.95rem;font-weight:700;">Review Threshold: {top.threshold * 100:.0f}%</span>'
             '</div>'
             '</div>'
-            f'<div style="font-size:1.75rem;font-weight:800;color:#991B1B;margin:6px 0 4px 0;">{top.pathology}</div>'
-            f'<div style="font-size:0.95rem;color:#4B5563;line-height:1.5;"><b style="color:#1F2937;">Clinical Finding:</b> {top_desc}</div>'
+            f'<div style="font-size:2.0rem;font-weight:800;color:#991B1B;margin:8px 0 4px 0;line-height:1.2;">{top.pathology}</div>'
+            f'<div style="font-size:1.02rem;color:#374151;margin-bottom:10px;line-height:1.5;"><b style="color:#111827;">📖 Medical Definition:</b> {top_desc}</div>'
             + additional_badges_html
             + reassuring_html
             + '</div>'
