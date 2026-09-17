@@ -284,10 +284,6 @@ def render_export_section(result: PredictionResult, image_bytes: Optional[bytes]
         inference_time_sec=inference_time_sec
     )
 
-    # On-Screen Formatted English Report View
-    with st.expander("📋 View Explanation Summary", expanded=True):
-        st.text(human_report)
-
     # Download PDF Action
     col_d1, col_d2 = st.columns([2, 1])
     with col_d1:
