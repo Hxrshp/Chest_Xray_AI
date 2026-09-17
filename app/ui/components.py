@@ -27,12 +27,7 @@ from app.config import (
     MODEL_METRICS,
 )
 from app.services.explanation_service import generate_gradcam_explanation
-from app.services.export_service import (
-    create_export_payload,
-    generate_conversational_summary,
-    generate_human_readable_report,
-    generate_pdf_report
-)
+from app.services.export_service import generate_conversational_summary
 
 
 def render_header():
@@ -231,75 +226,3 @@ def render_model_info():
         | **95% Confidence Interval** | `{MODEL_METRICS['ci_95_macro_auroc']}` |
         """)
 
-
-def render_export_section(result: PredictionResult, image_bytes: Optional[bytes] = None, inference_time_sec: Optional[float] = None):
-    st.markdown("---")
-    st.subheader("📄 Generate Patient Diagnostic Report (PDF)")
-    st.caption("Enter patient details below to generate and download an official, formatted medical diagnostic report.")
-
-    # Auto-generate a unique Patient ID based on image hash and timestamp
-    import hashlib
-    raw_hash = hashlib.sha256(image_bytes or b"default").hexdigest()[:6].upper()
-    default_pid = f"CXR-2026-{raw_hash}"
-
-    # Patient Details Input Card
-    with st.container():
-        st.markdown("""
-        <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px 18px; margin-bottom: 16px;">
-            <div style="font-size: 1rem; font-weight: 700; color: #0F172A; margin-bottom: 4px;">👤 Patient Identification & Study Details</div>
-            <div style="font-size: 0.85rem; color: #64748B;">These details will be stamped onto the official PDF diagnostic report.</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        col_p1, col_p2, col_p3 = st.columns([2, 1, 1.5])
-        with col_p1:
-            patient_name = st.text_input("Patient Full Name:", value="Patient " + raw_hash[:4], placeholder="e.g. John Doe")
-        with col_p2:
-            patient_age = st.number_input("Patient Age (Years):", min_value=1, max_value=120, value=45, step=1)
-        with col_p3:
-            patient_gender = st.selectbox("Biological Sex / Gender:", ["Female", "Male", "Other", "Unspecified"])
-
-        patient_id = st.text_input("Generated Patient ID (Unique):", value=default_pid, help="Auto-generated secure patient study identifier.")
-
-    patient_info = {
-        "patient_id": patient_id.strip() if patient_id else default_pid,
-        "name": patient_name.strip() if patient_name else "Anonymous Patient",
-        "age": str(patient_age),
-        "gender": patient_gender
-    }
-
-    # Generate Human-Readable Text Report
-    human_report = generate_human_readable_report(
-        result,
-        patient_info=patient_info,
-        image_bytes=image_bytes,
-        inference_time_sec=inference_time_sec
-    )
-
-    # Generate PDF Report
-    pdf_bytes = generate_pdf_report(
-        result,
-        patient_info=patient_info,
-        image_bytes=image_bytes,
-        inference_time_sec=inference_time_sec
-    )
-
-    # Download PDF Action
-    col_d1, col_d2 = st.columns([2, 1])
-    with col_d1:
-        st.download_button(
-            label=f"📄 Download Official PDF Medical Report for {patient_info['name']} (.pdf)",
-            data=pdf_bytes,
-            file_name=f"Medical_Report_{patient_info['patient_id']}_{Path(result.image_path).stem}.pdf",
-            mime="application/pdf",
-            type="primary",
-            use_container_width=True
-        )
-    with col_d2:
-        st.download_button(
-            label="📥 Download Clinical Text Summary (.txt)",
-            data=human_report,
-            file_name=f"Clinical_Summary_{patient_info['patient_id']}_{Path(result.image_path).stem}.txt",
-            mime="text/plain",
-            use_container_width=True
-        )
