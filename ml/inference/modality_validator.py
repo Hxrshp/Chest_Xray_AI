@@ -35,20 +35,24 @@ def validate_chest_radiograph(image: Image.Image) -> Tuple[bool, str, Dict[str, 
             "frontal chest radiograph framing (expected ~0.70 to 1.35)."
         ), {"aspect_ratio": round(aspect_ratio, 2)}
 
-    arr_rgb = np.array(img_rgb, dtype=np.float32)
-
-    # 2. Color Saturation / Monochrome Check
-    # Medical radiographs are monochromatic (R ≈ G ≈ B across pixels)
+    # 2. Color Saturation & Chromatic Check
+    # Real X-rays can have slight JPEG compression artifacts or medical blue film tints (divergence up to ~15-18).
+    # Natural color photos (bikes, cars, landscapes) have divergence > 25.0 and high saturation.
     rg_diff = np.abs(arr_rgb[:, :, 0] - arr_rgb[:, :, 1]).mean()
     gb_diff = np.abs(arr_rgb[:, :, 1] - arr_rgb[:, :, 2]).mean()
     rb_diff = np.abs(arr_rgb[:, :, 0] - arr_rgb[:, :, 2]).mean()
     color_divergence = float((rg_diff + gb_diff + rb_diff) / 3.0)
 
-    if color_divergence > 6.5:
+    # Check HSV saturation
+    hsv = img_rgb.convert("HSV")
+    sat = np.array(hsv, dtype=np.float32)[:, :, 1] / 255.0
+    mean_saturation = float(sat.mean())
+
+    if color_divergence > 22.0 or (color_divergence > 16.0 and mean_saturation > 0.28):
         return False, (
-            f"Vivid color detected (chromatic divergence: {color_divergence:.1f} > threshold 6.5). "
-            "Standard chest radiographs are monochromatic grayscale images."
-        ), {"color_divergence": round(color_divergence, 2)}
+            f"Vivid natural color detected (chromatic divergence: {color_divergence:.1f}, saturation: {mean_saturation:.2f}). "
+            "Standard chest radiographs are monochrome or near-monochrome images."
+        ), {"color_divergence": round(color_divergence, 2), "mean_saturation": round(mean_saturation, 2)}
 
     # 3. Thoracic Intensity & Anatomical Symmetry Check (Works on Grayscale / B&W non-lung photos)
     gray = np.array(img_rgb.convert("L").resize((256, 256)), dtype=np.float32)
