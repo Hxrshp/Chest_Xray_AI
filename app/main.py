@@ -21,6 +21,7 @@ from app.ui.components import (
     render_gradcam_section,
     render_pathology_detail_panel,
     render_model_info,
+    render_export_section,
 )
 from app.services.inference_service import run_inference
 from app.services.explanation_service import generate_gradcam_explanation
@@ -141,6 +142,7 @@ def main():
                 render_results_dashboard(result, inference_time_sec=elapsed)
                 render_pathology_detail_panel(result)
                 render_gradcam_section(pil_img, result)
+                render_export_section(result, image_bytes=image_bytes, inference_time_sec=elapsed)
 
         except Exception as e:
             st.error(f"Unable to process this image: {e}")
