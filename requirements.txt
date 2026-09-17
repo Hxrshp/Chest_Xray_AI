@@ -35,6 +35,8 @@ python-dotenv>=1.0.0
 pyyaml>=6.0.1
 tqdm>=4.66.0
 
-# Testing & Code Quality
 pytest>=7.4.0
 httpx>=0.25.0
+streamlit>=1.28.0
+reportlab>=4.0.0
+

@@ -27,7 +27,12 @@ from app.config import (
     MODEL_METRICS,
 )
 from app.services.explanation_service import generate_gradcam_explanation
-from app.services.export_service import create_export_payload
+from app.services.export_service import (
+    create_export_payload,
+    generate_conversational_summary,
+    generate_human_readable_report,
+    generate_pdf_report
+)
 
 
 def render_header():
@@ -91,6 +96,17 @@ def render_results_dashboard(result: PredictionResult, inference_time_sec: Optio
             <div style="font-size: 1.05rem; color: #166534;">No acute pathologies detected above diagnostic threshold.</div>
         </div>
         """, unsafe_allow_html=True)
+
+    # Conversational Explanation
+    conv_summary = generate_conversational_summary(result)
+    st.markdown(f"""
+    <div style="background-color: #F8FAFC; border: 1px solid #CBD5E1; border-left: 5px solid #2563EB; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px;">
+        <div style="font-size: 0.95rem; font-weight: 700; color: #1E3A8A; margin-bottom: 6px;">💬 Explanation:</div>
+        <div style="font-size: 0.95rem; color: #334155; line-height: 1.5;">
+            {conv_summary.replace(chr(10), '<br>')}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     # View Mode Toggle (Flagged First vs Ranked vs Official Order)
     st.write("### All 14 Pathology Model Probabilities & Decision Flags")
@@ -201,21 +217,93 @@ def render_pathology_detail_panel(result: PredictionResult):
 
 
 def render_model_info():
-    with st.expander("ℹ️ Model Architecture & Verified Performance Metadata", expanded=False):
-        st.write("### Production Model Specifications")
-        st.json(MODEL_METRICS)
+    with st.expander("ℹ️ Model Architecture & Performance Specifications", expanded=False):
+        st.write("### AI Model Verification Metrics")
+        st.markdown(f"""
+        | Metric / Parameter | Value |
+        | :--- | :--- |
+        | **Model Architecture** | `{MODEL_METRICS['architecture']}` |
+        | **Parameters** | `{MODEL_METRICS['parameters']}` |
+        | **Input Resolution** | `{MODEL_METRICS['input_resolution']}` |
+        | **Selected Baseline** | `{MODEL_METRICS['selected_experiment']}` |
+        | **NIH Held-Out Test AUROC** | `{MODEL_METRICS['test_macro_auroc']}` |
+        | **Multi-Center Validation AUROC** | `{MODEL_METRICS['val_macro_auroc']}` |
+        | **95% Confidence Interval** | `{MODEL_METRICS['ci_95_macro_auroc']}` |
+        """)
 
 
 def render_export_section(result: PredictionResult, image_bytes: Optional[bytes] = None, inference_time_sec: Optional[float] = None):
     st.markdown("---")
-    st.subheader("💾 Export Machine-Readable Analysis Payload")
-    
-    payload = create_export_payload(result, image_bytes=image_bytes, inference_time_sec=inference_time_sec)
-    json_str = json.dumps(payload, indent=2)
+    st.subheader("📄 Generate Patient Diagnostic Report (PDF)")
+    st.caption("Enter patient details below to generate and download an official, formatted medical diagnostic report.")
 
-    st.download_button(
-        label="Download Full Prediction JSON Payload",
-        data=json_str,
-        file_name=f"chest_xray_analysis_{Path(result.image_path).stem}.json",
-        mime="application/json"
+    # Auto-generate a unique Patient ID based on image hash and timestamp
+    import hashlib
+    raw_hash = hashlib.sha256(image_bytes or b"default").hexdigest()[:6].upper()
+    default_pid = f"CXR-2026-{raw_hash}"
+
+    # Patient Details Input Card
+    with st.container():
+        st.markdown("""
+        <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 14px 18px; margin-bottom: 16px;">
+            <div style="font-size: 1rem; font-weight: 700; color: #0F172A; margin-bottom: 4px;">👤 Patient Identification & Study Details</div>
+            <div style="font-size: 0.85rem; color: #64748B;">These details will be stamped onto the official PDF diagnostic report.</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        col_p1, col_p2, col_p3 = st.columns([2, 1, 1.5])
+        with col_p1:
+            patient_name = st.text_input("Patient Full Name:", value="Patient " + raw_hash[:4], placeholder="e.g. John Doe")
+        with col_p2:
+            patient_age = st.number_input("Patient Age (Years):", min_value=1, max_value=120, value=45, step=1)
+        with col_p3:
+            patient_gender = st.selectbox("Biological Sex / Gender:", ["Female", "Male", "Other", "Unspecified"])
+
+        patient_id = st.text_input("Generated Patient ID (Unique):", value=default_pid, help="Auto-generated secure patient study identifier.")
+
+    patient_info = {
+        "patient_id": patient_id.strip() if patient_id else default_pid,
+        "name": patient_name.strip() if patient_name else "Anonymous Patient",
+        "age": str(patient_age),
+        "gender": patient_gender
+    }
+
+    # Generate Human-Readable Text Report
+    human_report = generate_human_readable_report(
+        result,
+        patient_info=patient_info,
+        image_bytes=image_bytes,
+        inference_time_sec=inference_time_sec
     )
+
+    # Generate PDF Report
+    pdf_bytes = generate_pdf_report(
+        result,
+        patient_info=patient_info,
+        image_bytes=image_bytes,
+        inference_time_sec=inference_time_sec
+    )
+
+    # On-Screen Formatted English Report View
+    with st.expander("📋 View Explanation Summary", expanded=True):
+        st.text(human_report)
+
+    # Download PDF Action
+    col_d1, col_d2 = st.columns([2, 1])
+    with col_d1:
+        st.download_button(
+            label=f"📄 Download Official PDF Medical Report for {patient_info['name']} (.pdf)",
+            data=pdf_bytes,
+            file_name=f"Medical_Report_{patient_info['patient_id']}_{Path(result.image_path).stem}.pdf",
+            mime="application/pdf",
+            type="primary",
+            use_container_width=True
+        )
+    with col_d2:
+        st.download_button(
+            label="📥 Download Clinical Text Summary (.txt)",
+            data=human_report,
+            file_name=f"Clinical_Summary_{patient_info['patient_id']}_{Path(result.image_path).stem}.txt",
+            mime="text/plain",
+            use_container_width=True
+        )
