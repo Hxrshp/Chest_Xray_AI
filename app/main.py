@@ -129,17 +129,17 @@ def main():
                     st.session_state.pop("last_result", None)
 
                 st.html(
-                    f'<div style="background-color: #FEF2F2; border: 1.5px solid #FCA5A5; border-left: 6px solid #DC2626; border-radius: 10px; padding: 16px 20px; margin: 18px 0; box-shadow: 0 2px 5px rgba(220, 38, 38, 0.06);">'
-                    f'<div style="font-size: 1.1rem; font-weight: 800; color: #991B1B; display: flex; align-items: center; gap: 8px;">'
-                    f'<span>🚫</span> Invalid Image (Analysis Blocked)'
-                    f'</div>'
-                    f'<div style="font-size: 0.95rem; color: #374151; margin-top: 6px; line-height: 1.5;">'
-                    f'{modality_error}'
-                    f'</div>'
-                    f'<div style="font-size: 0.88rem; color: #991B1B; margin-top: 8px;">'
-                    f'💡 <b>Safety Note:</b> Non-medical images are blocked to prevent false diagnoses. Please upload a valid chest radiograph.'
-                    f'</div>'
-                    f'</div>'
+                    '<div style="background-color: #FEF2F2; border: 1.5px solid #FCA5A5; border-left: 6px solid #DC2626; border-radius: 10px; padding: 16px 20px; margin: 18px 0; box-shadow: 0 2px 5px rgba(220, 38, 38, 0.06);">'
+                    '<div style="font-size: 1.15rem; font-weight: 800; color: #991B1B; display: flex; align-items: center; gap: 8px;">'
+                    '<span>🚫</span> Invalid Image (Analysis Blocked)'
+                    '</div>'
+                    '<div style="font-size: 1.0rem; font-weight: 600; color: #1F2937; margin-top: 6px; line-height: 1.5;">'
+                    'Try uploading a valid Chest X-Ray'
+                    '</div>'
+                    '<div style="font-size: 0.90rem; color: #991B1B; margin-top: 6px;">'
+                    '<b>Note:</b> Non-medical images are blocked to prevent false diagnoses. Please upload a valid chest radiograph.'
+                    '</div>'
+                    '</div>'
                 )
             else:
                 # Analyze Button (Only active for legitimate radiographs)
