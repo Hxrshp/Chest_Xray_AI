@@ -6,7 +6,7 @@ Handles safe image decoding (Grayscale, RGB, RGBA), resolution resizing, and Ima
 
 import os
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 import numpy as np
 from PIL import Image
 import torch
@@ -64,4 +64,54 @@ def preprocess_image(
     # [H, W, 3] -> [1, 3, H, W]
     img_tensor = torch.from_numpy(img_norm).permute(2, 0, 1).unsqueeze(0).float()
     return img_tensor, pil_img
+
+
+def validate_radiograph_modality(pil_img: Image.Image) -> Tuple[bool, Optional[str]]:
+    """
+    Validates that the input image is a legitimate monochrome chest radiograph.
+    Strictly blocks Out-of-Distribution (OOD) inputs like color photographs,
+    scenery, vehicles, or corrupted images.
+
+    Returns:
+        (is_valid: bool, error_reason: Optional[str])
+    """
+    img_rgb = pil_img.convert("RGB")
+    arr = np.array(img_rgb, dtype=np.float32)
+
+    # Check 1: Minimum resolution
+    w, h = pil_img.size
+    if w < 100 or h < 100:
+        return False, f"Image resolution is too low ({w}×{h}px). Minimum required is 100×100px."
+
+    # Check 2: Contrast / Standard Deviation (blank or solid images)
+    gray = np.mean(arr, axis=2)
+    std_dev = float(np.std(gray))
+    if std_dev < 10.0:
+        return False, f"Image has insufficient contrast (std: {std_dev:.1f}). Image appears blank or corrupted."
+
+    # Check 3: Color Saturation / Inter-Channel Discrepancy (Natural photos vs Monochrome X-rays)
+    # Real X-rays have near-identical R, G, B channels (channel difference near 0)
+    channel_diff = float(np.mean(
+        np.abs(arr[:, :, 0] - arr[:, :, 1]) +
+        np.abs(arr[:, :, 1] - arr[:, :, 2]) +
+        np.abs(arr[:, :, 0] - arr[:, :, 2])
+    ) / 3.0)
+
+    max_c = np.max(arr, axis=2)
+    min_c = np.min(arr, axis=2)
+    # Average saturation for non-black pixels
+    mask = max_c > 15
+    if np.any(mask):
+        sat_pct = float(np.mean((max_c[mask] - min_c[mask]) / (max_c[mask] + 1e-5)) * 100.0)
+    else:
+        sat_pct = 0.0
+
+    # High color saturation means it's a color photo, not an X-ray
+    if channel_diff > 12.0 or sat_pct > 15.0:
+        return False, (
+            f"Vivid color photograph detected (Color Saturation: {sat_pct:.1f}%, Inter-channel Discrepancy: {channel_diff:.1f}). "
+            "Chest X-rays are monochromatic radiographs."
+        )
+
+    return True, None
 

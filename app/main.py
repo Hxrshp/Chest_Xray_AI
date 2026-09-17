@@ -22,11 +22,10 @@ from app.ui.components import (
     render_pathology_detail_panel,
     render_model_info,
     render_export_section,
-    render_non_lung_rejection,
 )
-from ml.inference.modality_validator import validate_chest_radiograph
 from app.services.inference_service import run_inference
 from app.services.explanation_service import generate_gradcam_explanation
+from ml.inference.preprocessing import validate_radiograph_modality
 
 
 def main():
@@ -120,21 +119,31 @@ def main():
             # Display Image Preview & Preprocessing Transparency Checklist
             render_uploaded_image_preview(pil_img, filename)
 
-            # Analyze Button
-            st.markdown("---")
-            if st.button("🚀 Analyze Radiograph", type="primary", use_container_width=True):
-                # Tier 1: Modality Validation (Lung vs Non-Lung Image)
-                is_valid_cxr, validation_reason, metrics = validate_chest_radiograph(pil_img)
+            # Strict Modality Check (Option B: Block non-radiographs)
+            is_valid_xray, modality_error = validate_radiograph_modality(pil_img)
 
-                if not is_valid_cxr:
-                    st.session_state["validation_failed"] = True
-                    st.session_state["validation_reason"] = validation_reason
-                    st.session_state["validation_metrics"] = metrics
-                    st.session_state["last_filename"] = filename
-                    # Remove any previous valid result for this session
+            st.markdown("---")
+            if not is_valid_xray:
+                # Clear any previous cached results for safety
+                if st.session_state.get("last_filename") == filename:
                     st.session_state.pop("last_result", None)
-                else:
-                    st.session_state["validation_failed"] = False
+
+                st.html(
+                    f'<div style="background-color: #FEF2F2; border: 1.5px solid #FCA5A5; border-left: 6px solid #DC2626; border-radius: 10px; padding: 18px 22px; margin: 18px 0; box-shadow: 0 2px 5px rgba(220, 38, 38, 0.08);">'
+                    f'<div style="font-size: 1.12rem; font-weight: 800; color: #991B1B; display: flex; align-items: center; gap: 8px;">'
+                    f'<span>🚫</span> Invalid Image Modality (Analysis Blocked)'
+                    f'</div>'
+                    f'<div style="font-size: 0.95rem; color: #4B5563; margin-top: 8px; line-height: 1.5;">'
+                    f'{modality_error}'
+                    f'</div>'
+                    f'<div style="font-size: 0.88rem; color: #991B1B; margin-top: 10px; padding-top: 10px; border-top: 1px dashed #FECDD3;">'
+                    f'💡 <b>Clinical Safety Policy:</b> DenseNet-121 was trained exclusively on thoracic radiographs. Analyzing non-medical photos (vehicles, everyday objects, scenery) produces false positives and is strictly prevented. Please upload a legitimate monochrome chest radiograph.'
+                    f'</div>'
+                    f'</div>'
+                )
+            else:
+                # Analyze Button (Only active for legitimate radiographs)
+                if st.button("🚀 Analyze Radiograph", type="primary", use_container_width=True):
                     with st.spinner("Executing DenseNet-121 inference model..."):
                         start_t = time.time()
                         result = run_inference(pil_img)
@@ -146,24 +155,17 @@ def main():
                         st.session_state["last_elapsed"] = elapsed
                         st.session_state["last_filename"] = filename
 
-            # Render Tier 1 Non-Lung rejection if validation failed
-            if st.session_state.get("validation_failed") and st.session_state.get("last_filename") == filename:
-                render_non_lung_rejection(
-                    st.session_state["validation_reason"],
-                    st.session_state.get("validation_metrics")
-                )
+                # Render Results if available in session_state
+                if "last_result" in st.session_state and st.session_state.get("last_filename") == filename:
+                    result = st.session_state["last_result"]
+                    pil_img = st.session_state["last_pil"]
+                    image_bytes = st.session_state["last_bytes"]
+                    elapsed = st.session_state["last_elapsed"]
 
-            # Render Tier 2 Diagnostic Results if valid and available in session_state
-            elif "last_result" in st.session_state and st.session_state.get("last_filename") == filename:
-                result = st.session_state["last_result"]
-                pil_img = st.session_state["last_pil"]
-                image_bytes = st.session_state["last_bytes"]
-                elapsed = st.session_state["last_elapsed"]
-
-                render_results_dashboard(result, inference_time_sec=elapsed)
-                render_pathology_detail_panel(result)
-                render_gradcam_section(pil_img, result)
-                render_export_section(result, image_bytes=image_bytes, inference_time_sec=elapsed)
+                    render_results_dashboard(result, inference_time_sec=elapsed)
+                    render_pathology_detail_panel(result)
+                    render_gradcam_section(pil_img, result)
+                    render_export_section(result, image_bytes=image_bytes, inference_time_sec=elapsed)
 
         except Exception as e:
             st.error(f"Unable to process this image: {e}")

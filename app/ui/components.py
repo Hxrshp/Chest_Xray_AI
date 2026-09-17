@@ -119,7 +119,7 @@ def render_results_dashboard(result: PredictionResult, inference_time_sec: Optio
             '<div style="background-color:#FEF2F2;border:1.5px solid #FCA5A5;border-left:6px solid #DC2626;border-radius:12px;padding:20px 24px;margin-bottom:22px;box-shadow:0 2px 5px rgba(220,38,38,0.06);">'
             '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:6px;">'
             '<div style="font-size:0.95rem;font-weight:800;color:#991B1B;text-transform:uppercase;letter-spacing:0.8px;display:flex;align-items:center;gap:8px;">'
-            '<span>🚨</span> Lung Verified: Faulty (Abnormality Detected)'
+            '<span>🚨</span> AI Clinical Impression'
             '</div>'
             '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
             f'<span style="background-color:#DC2626;color:#FFFFFF;padding:6px 14px;border-radius:9999px;font-size:1.0rem;font-weight:700;box-shadow:0 1px 2px rgba(220,38,38,0.2);">{top.probability * 100:.1f}% Confidence</span>'
@@ -138,8 +138,8 @@ def render_results_dashboard(result: PredictionResult, inference_time_sec: Optio
         normal_top_desc = PATHOLOGY_DESCRIPTIONS.get(normal_top_class, PATHOLOGY_DESCRIPTIONS.get(normal_top_class.replace("_", " "), "Normal finding."))
         normal_html = (
             '<div style="background-color:#F0FDF4;border:1.5px solid #86EFAC;border-left:6px solid #16A34A;border-radius:12px;padding:18px 22px;margin-bottom:22px;box-shadow:0 2px 4px rgba(22,163,74,0.06);">'
-            '<div style="font-size:0.85rem;font-weight:800;color:#166534;text-transform:uppercase;letter-spacing:0.7px;display:flex;align-items:center;gap:6px;">'
-            '<span>✅</span> Lung Verified: Healthy (Normal Radiograph)'
+            '<div style="font-size:0.82rem;font-weight:800;color:#166534;text-transform:uppercase;letter-spacing:0.6px;display:flex;align-items:center;gap:6px;">'
+            '<span>✅</span> AI Clinical Impression'
             '</div>'
             '<div style="font-size:1.75rem;font-weight:800;color:#15803D;margin:6px 0 4px 0;">Unremarkable Radiograph (No Acute Finding)</div>'
             '<div style="font-size:0.95rem;color:#166534;line-height:1.5;">All 14 thoracic disease categories evaluated were within normal baseline limits and below diagnostic review thresholds.</div>'
@@ -343,32 +343,5 @@ def render_export_section(result: PredictionResult, image_bytes: Optional[bytes]
             mime="text/plain",
             use_container_width=True
         )
-
-
-def render_non_lung_rejection(reason: str, metrics: Optional[Dict[str, Any]] = None):
-    st.markdown("---")
-    st.html(
-        '<div style="background-color: #FEF2F2; border: 2px solid #EF4444; border-left: 8px solid #DC2626; border-radius: 12px; padding: 22px 26px; margin: 18px 0; box-shadow: 0 4px 6px rgba(220, 38, 38, 0.08);">'
-        '<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">'
-        '<div style="font-size: 1.35rem; font-weight: 800; color: #991B1B; display: flex; align-items: center; gap: 10px;">'
-        '<span>🚫</span> Tier 1 Rejection: Non-Lung Image Detected'
-        '</div>'
-        '<span style="background-color: #DC2626; color: white; padding: 4px 12px; border-radius: 9999px; font-size: 0.85rem; font-weight: 700;">'
-        'Invalid Radiograph ✗'
-        '</span>'
-        '</div>'
-        '<div style="font-size: 1.05rem; color: #7F1D1D; line-height: 1.5; margin-bottom: 12px;">'
-        'The uploaded file does not match the radiographic or anatomical properties of a human chest X-ray. '
-        '<b>Medical disease classification has been strictly stopped</b> to prevent false diagnosis.'
-        '</div>'
-        f'<div style="background-color: #FEE2E2; border: 1px solid #FECDD3; border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; font-size: 0.95rem; color: #991B1B;">'
-        f'<b>Why this was rejected:</b> {reason}'
-        '</div>'
-        '<div style="font-size: 0.92rem; color: #4B5563; display: flex; align-items: center; gap: 6px;">'
-        '<span>👉</span> <i>Please select or upload a valid monochrome frontal chest radiograph (AP or PA projection) to evaluate lung health.</i>'
-        '</div>'
-        '</div>'
-    )
-
 
 
