@@ -154,13 +154,3 @@ All foundation verification tests PASSED!
 ```
 
 ---
-
-## 📊 Current Project Metrics Status
-
-| Metric | Status |
-| :--- | :--- |
-| **Model AUROC** | `NOT YET MEASURED` |
-| **Sensitivity** | `NOT YET MEASURED` |
-| **Specificity** | `NOT YET MEASURED` |
-| **F1 Score** | `NOT YET MEASURED` |
-| **Dataset Size** | `NOT YET MEASURED` |
